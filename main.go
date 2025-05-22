@@ -16,20 +16,41 @@ import (
 
 var port string
 var charset string
+var useHTTPS bool
+var certFile string
+var keyFile string
 
 func main() {
+	port = "8888"         // 기본 포트 설정
+	charset = "utf8"      // 기본 charset 설정
+	useHTTPS = false      // 기본적으로 HTTP 사용
+	certFile = "cert.pem" // 기본 인증서 파일
+	keyFile = "key.pem"   // 기본 키 파일
 
-	port = "8888"                                            // 기본 포트 설정
-	charset = "utf8"                                         // 기본 charset 설정
 	flag.StringVar(&port, "p", port, "port")                 // 플래그 설정
 	flag.StringVar(&charset, "c", charset, "output charset") // 플래그 설정
-	flag.Parse()                                             // 플래그 파싱
+	flag.BoolVar(&useHTTPS, "https", useHTTPS, "use HTTPS")  // HTTPS 사용 여부
+	flag.StringVar(&certFile, "cert", certFile, "certificate file path")
+	flag.StringVar(&keyFile, "key", keyFile, "private key file path")
+	flag.Parse() // 플래그 파싱
 	fmt.Println("Port", port)
 	fmt.Println("Charset", charset)
+	fmt.Println("Use HTTPS", useHTTPS)
 
 	handler := http.HandlerFunc(handleRequest)
 	http.Handle("/", handler)
-	http.ListenAndServe(":"+port, nil)
+
+	if useHTTPS {
+		log.Printf("Starting HTTPS server on port %s", port)
+		if err := http.ListenAndServeTLS(":"+port, certFile, keyFile, nil); err != nil {
+			log.Fatalf("Error starting HTTPS server: %v", err)
+		}
+	} else {
+		log.Printf("Starting HTTP server on port %s", port)
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
+			log.Fatalf("Error starting HTTP server: %v", err)
+		}
+	}
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
